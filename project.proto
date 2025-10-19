@@ -1,0 +1,101 @@
+syntax = "proto3";
+
+package project;
+
+// Project Service - Exposed by project-service
+service ProjectService {
+  // Get project details by ID
+  rpc GetProject(GetProjectRequest) returns (ProjectResponse);
+  
+  // Validate if a user has access to a project
+  rpc ValidateProjectAccess(ValidateAccessRequest) returns (ValidateAccessResponse);
+  
+  // Get project members
+  rpc GetProjectMembers(GetProjectRequest) returns (MembersResponse);
+  
+  // Check if project can accept new tasks (not archived/completed)
+  rpc CanAddTasks(GetProjectRequest) returns (CanAddTasksResponse);
+}
+
+// Request Messages
+message GetProjectRequest {
+  string project_id = 1;
+}
+
+message ValidateAccessRequest {
+  string project_id = 1;
+  string user_id = 2;
+}
+
+// Response Messages
+message ProjectResponse {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  string status = 4;
+  string owner = 5;
+  repeated string members = 6;
+  repeated string tags = 7;
+  string created_at = 8;
+  string updated_at = 9;
+}
+
+message ValidateAccessResponse {
+  bool has_access = 1;
+  string message = 2;
+}
+
+message MembersResponse {
+  string project_id = 1;
+  string owner = 2;
+  repeated string members = 3;
+}
+
+message CanAddTasksResponse {
+  bool can_add = 1;
+  string status = 2;
+  string message = 3;
+}
+
+// Event Messages for inter-service communication via RabbitMQ
+
+message ProjectCreatedEvent {
+  string project_id = 1;
+  string name = 2;
+  string description = 3;
+  string status = 4;
+  string owner = 5;
+  repeated string tags = 6;
+  int64 timestamp = 7;
+}
+
+message ProjectUpdatedEvent {
+  string project_id = 1;
+  map<string, string> changes = 2;
+  int64 timestamp = 3;
+}
+
+message ProjectDeletedEvent {
+  string project_id = 1;
+  string deleted_by = 2;
+  int64 timestamp = 3;
+}
+
+message ProjectArchivedEvent {
+  string project_id = 1;
+  string archived_by = 2;
+  int64 timestamp = 3;
+}
+
+message ProjectMemberAddedEvent {
+  string project_id = 1;
+  string user_id = 2;
+  string role = 3;
+  int64 timestamp = 4;
+}
+
+message ProjectMemberRemovedEvent {
+  string project_id = 1;
+  string user_id = 2;
+  int64 timestamp = 3;
+}

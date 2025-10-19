@@ -1,0 +1,113 @@
+syntax = "proto3";
+
+package task;
+
+// Task Service - Exposed by task-service
+service TaskService {
+  // Get all tasks for a specific project
+  rpc GetTasksByProject(GetTasksByProjectRequest) returns (TasksResponse);
+  
+  // Get task statistics for a project
+  rpc GetTaskStatistics(GetTasksByProjectRequest) returns (TaskStatsResponse);
+  
+  // Delete all tasks for a project (used before project deletion)
+  rpc DeleteTasksByProject(DeleteTasksByProjectRequest) returns (DeleteResponse);
+  
+  // Count tasks for a project
+  rpc CountTasksByProject(GetTasksByProjectRequest) returns (CountResponse);
+}
+
+// Request Messages
+message GetTasksByProjectRequest {
+  string project_id = 1;
+}
+
+message DeleteTasksByProjectRequest {
+  string project_id = 1;
+  bool confirm = 2; // Safety flag to prevent accidental deletion
+}
+
+// Response Messages
+message TasksResponse {
+  repeated Task tasks = 1;
+  int32 total = 2;
+}
+
+message Task {
+  string id = 1;
+  string title = 2;
+  string description = 3;
+  string status = 4;
+  string priority = 5;
+  string project_id = 6;
+  string created_at = 7;
+  string updated_at = 8;
+}
+
+message TaskStatsResponse {
+  string project_id = 1;
+  int32 total = 2;
+  TaskStatusCounts by_status = 3;
+  string completion_rate = 4;
+}
+
+message TaskStatusCounts {
+  int32 pending = 1;
+  int32 in_progress = 2;
+  int32 completed = 3;
+  int32 cancelled = 4;
+}
+
+message DeleteResponse {
+  bool success = 1;
+  int32 deleted_count = 2;
+  string message = 3;
+}
+
+message CountResponse {
+  string project_id = 1;
+  int32 count = 2;
+}
+
+// Event Messages for inter-service communication via RabbitMQ
+
+message TaskCreatedEvent {
+  string task_id = 1;
+  string project_id = 2;
+  string title = 3;
+  string description = 4;
+  string status = 5;
+  string priority = 6;
+  string assigned_to = 7;
+  int64 timestamp = 8;
+}
+
+message TaskUpdatedEvent {
+  string task_id = 1;
+  string project_id = 2;
+  map<string, string> changes = 3;
+  int64 timestamp = 4;
+}
+
+message TaskDeletedEvent {
+  string task_id = 1;
+  string project_id = 2;
+  string deleted_by = 3;
+  int64 timestamp = 4;
+}
+
+message TaskStatusChangedEvent {
+  string task_id = 1;
+  string project_id = 2;
+  string old_status = 3;
+  string new_status = 4;
+  int64 timestamp = 5;
+}
+
+message TaskAssignedEvent {
+  string task_id = 1;
+  string project_id = 2;
+  string assigned_to = 3;
+  string assigned_by = 4;
+  int64 timestamp = 5;
+}
