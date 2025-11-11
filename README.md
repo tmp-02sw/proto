@@ -58,3 +58,46 @@ npm run proto:generate
 - **task-service gRPC:** `50052`
 - **project-service HTTP:** `3001`
 - **task-service HTTP:** `3000`
+
+---
+
+## Automatic Pipeline Triggers
+
+When changes are pushed to this repository, dependent service pipelines are automatically triggered:
+
+### Dependent Services
+- ✅ **task-service** - Uses `task.proto` and `project.proto`
+- ✅ **project-service** - Uses `project.proto`
+- ✅ **notification-service** - Uses proto files for messaging
+
+### How It Works
+
+1. **Proto Repository Workflow** (`.github/workflows/trigger-dependent-services.yml`)
+   - Triggers on push to `main`, `master`, or `develop` branches
+   - Only triggers when `.proto` files are changed
+   - Dispatches `repository_dispatch` events to dependent services
+
+2. **Service Workflows**
+   - Listen for `repository_dispatch` events with type `proto-updated`
+   - Automatically rebuild and redeploy when proto files change
+   - Display proto commit information in workflow summary
+
+### Setup Requirements
+
+**In the proto repository:**
+- Add `PAT_TOKEN` secret with permissions to trigger workflows in dependent repositories
+
+**In dependent service repositories:**
+- Workflows automatically listen for `proto-updated` events
+- No additional configuration needed
+
+### Manual Trigger
+
+To manually trigger dependent services:
+
+```bash
+# Using GitHub CLI
+gh workflow run trigger-dependent-services.yml --repo ws02-project/proto
+```
+
+Or use the GitHub API to dispatch events directly to service repositories.

@@ -109,5 +109,7 @@ message TaskAssignedEvent {
   string project_id = 2;
   string assigned_to = 3;
   string assigned_by = 4;
-  int64 timestamp = 5;
+  string title = 5;
+  string description = 6;
+  int64 timestamp = 7;
 }

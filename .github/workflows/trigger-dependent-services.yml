@@ -1,0 +1,104 @@
+name: Trigger Dependent Services
+
+# This workflow triggers dependent service pipelines when proto files change
+# Dependent services: task-service, project-service, notification-service
+
+on:
+  push:
+    branches: [main, master, develop]
+    paths:
+      - '*.proto'  # Only trigger on proto file changes
+      - '**/*.proto'
+
+permissions:
+  contents: read
+  # Note: PAT_TOKEN secret must be set in proto repository to trigger other repos
+
+jobs:
+  trigger-services:
+    runs-on: ubuntu-latest
+    name: Trigger Dependent Service Pipelines
+    
+    steps:
+      - name: Checkout proto repository
+        uses: actions/checkout@v4
+      
+      - name: Get changed proto files
+        id: changed-files
+        run: |
+          if [ "${{ github.event_name }}" == "push" ]; then
+            # Get list of changed proto files
+            if [ -n "${{ github.event.before }}" ] && [ "${{ github.event.before }}" != "0000000000000000000000000000000000000000" ]; then
+              CHANGED_FILES=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep '\.proto$' || echo "")
+            else
+              # First commit or no previous commit - list all proto files
+              CHANGED_FILES=$(find . -name "*.proto" -type f | sed 's|^\./||' || echo "")
+            fi
+            echo "changed_proto_files<<EOF" >> $GITHUB_OUTPUT
+            echo "$CHANGED_FILES" >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+          else
+            echo "changed_proto_files=" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Trigger task-service pipeline
+        uses: peter-evans/repository-dispatch@v3
+        with:
+          token: ${{ secrets.PAT_TOKEN }}
+          repository: ws02-project/task-service
+          event-type: proto-updated
+          client-payload: |-
+            {
+              "triggered_by": "proto-repository",
+              "proto_commit_sha": "${{ github.sha }}",
+              "proto_commit_message": "${{ github.event.head_commit.message }}",
+              "changed_files": "${{ steps.changed-files.outputs.changed_proto_files }}"
+            }
+      
+      - name: Trigger project-service pipeline
+        uses: peter-evans/repository-dispatch@v3
+        with:
+          token: ${{ secrets.PAT_TOKEN }}
+          repository: ws02-project/project-service
+          event-type: proto-updated
+          client-payload: |-
+            {
+              "triggered_by": "proto-repository",
+              "proto_commit_sha": "${{ github.sha }}",
+              "proto_commit_message": "${{ github.event.head_commit.message }}",
+              "changed_files": "${{ steps.changed-files.outputs.changed_proto_files }}"
+            }
+      
+      - name: Trigger notification-service pipeline
+        uses: peter-evans/repository-dispatch@v3
+        with:
+          token: ${{ secrets.PAT_TOKEN }}
+          repository: ws02-project/notification-service
+          event-type: proto-updated
+          client-payload: |-
+            {
+              "triggered_by": "proto-repository",
+              "proto_commit_sha": "${{ github.sha }}",
+              "proto_commit_message": "${{ github.event.head_commit.message }}",
+              "changed_files": "${{ steps.changed-files.outputs.changed_proto_files }}"
+            }
+      
+      - name: Summary
+        run: |
+          echo "## ✅ Triggered Dependent Service Pipelines" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Proto Commit:** \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Commit Message:** ${{ github.event.head_commit.message }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Triggered Services:" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ task-service" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ project-service" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ notification-service" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ -n "${{ steps.changed-files.outputs.changed_proto_files }}" ]; then
+            echo "### Changed Proto Files:" >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+            echo "${{ steps.changed-files.outputs.changed_proto_files }}" >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          fi
+
