@@ -82,6 +82,20 @@ jobs:
               "proto_commit_message": "${{ github.event.head_commit.message }}",
               "changed_files": "${{ steps.changed-files.outputs.changed_proto_files }}"
             }
+
+      - name: Trigger user-service pipeline
+        uses: peter-evans/repository-dispatch@v3
+        with:
+          token: ${{ secrets.PAT_TOKEN }}
+          repository: ws02-project/user-service
+          event-type: proto-updated
+          client-payload: |-
+            {
+              "triggered_by": "proto-repository",
+              "proto_commit_sha": "${{ github.sha }}",
+              "proto_commit_message": "${{ github.event.head_commit.message }}",
+              "changed_files": "${{ steps.changed-files.outputs.changed_proto_files }}"
+            }
       
       - name: Summary
         run: |
@@ -94,6 +108,7 @@ jobs:
           echo "- ✅ task-service" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ project-service" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ notification-service" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ user-service" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           if [ -n "${{ steps.changed-files.outputs.changed_proto_files }}" ]; then
             echo "### Changed Proto Files:" >> $GITHUB_STEP_SUMMARY
