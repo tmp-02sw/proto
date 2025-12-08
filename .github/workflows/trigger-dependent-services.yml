@@ -1,7 +1,7 @@
 name: Trigger Dependent Services
 
 # This workflow triggers dependent service pipelines when proto files change
-# Dependent services: task-service, project-service, notification-service
+# Dependent services: task-service, project-service, notification-service, user-service
 
 on:
   push:
