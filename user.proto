@@ -1,0 +1,172 @@
+syntax = "proto3";
+
+package user;
+
+option go_package = "github.com/ws02-project/proto/user";
+
+// User Service - Handles user management and authentication
+service UserService {
+  // Get user by ID
+  rpc GetUser(GetUserRequest) returns (GetUserResponse);
+  
+  // Get user by Asgardeo subject ID (sub claim from JWT)
+  rpc GetUserBySubject(GetUserBySubjectRequest) returns (GetUserResponse);
+  
+  // Get multiple users by IDs
+  rpc GetUsers(GetUsersRequest) returns (GetUsersResponse);
+  
+  // Create or update user (called after Asgardeo authentication)
+  rpc SyncUser(SyncUserRequest) returns (SyncUserResponse);
+  
+  // Validate user token and return user info
+  rpc ValidateToken(ValidateTokenRequest) returns (ValidateTokenResponse);
+  
+  // Get users by organization
+  rpc GetUsersByOrganization(GetUsersByOrganizationRequest) returns (GetUsersResponse);
+}
+
+// User roles
+enum UserRole {
+  USER_ROLE_UNSPECIFIED = 0;
+  USER_ROLE_USER = 1;
+  USER_ROLE_ADMIN = 2;
+  USER_ROLE_MANAGER = 3;
+}
+
+// User status
+enum UserStatus {
+  USER_STATUS_UNSPECIFIED = 0;
+  USER_STATUS_ACTIVE = 1;
+  USER_STATUS_INACTIVE = 2;
+  USER_STATUS_SUSPENDED = 3;
+}
+
+// User message
+message User {
+  string id = 1;
+  string subject = 2;           // Asgardeo subject ID (sub claim)
+  string email = 3;
+  string first_name = 4;
+  string last_name = 5;
+  string display_name = 6;
+  string avatar_url = 7;
+  UserRole role = 8;
+  UserStatus status = 9;
+  string organization_id = 10;
+  string created_at = 11;
+  string updated_at = 12;
+  map<string, string> metadata = 13;
+}
+
+// Get User Request
+message GetUserRequest {
+  string user_id = 1;
+}
+
+// Get User by Subject Request
+message GetUserBySubjectRequest {
+  string subject = 1;
+}
+
+// Get User Response
+message GetUserResponse {
+  User user = 1;
+}
+
+// Get Users Request
+message GetUsersRequest {
+  repeated string user_ids = 1;
+}
+
+// Get Users Response
+message GetUsersResponse {
+  repeated User users = 1;
+  int32 total = 2;
+}
+
+// Sync User Request - Called after successful Asgardeo authentication
+message SyncUserRequest {
+  string subject = 1;           // Asgardeo subject ID
+  string email = 2;
+  string first_name = 3;
+  string last_name = 4;
+  string display_name = 5;
+  string avatar_url = 6;
+  string organization_id = 7;
+  map<string, string> claims = 8;  // Additional claims from ID token
+}
+
+// Sync User Response
+message SyncUserResponse {
+  User user = 1;
+  bool is_new_user = 2;
+}
+
+// Validate Token Request
+message ValidateTokenRequest {
+  string access_token = 1;
+}
+
+// Validate Token Response
+message ValidateTokenResponse {
+  bool valid = 1;
+  User user = 2;
+  repeated string scopes = 3;
+  int64 expires_at = 4;
+}
+
+// Get Users by Organization Request
+message GetUsersByOrganizationRequest {
+  string organization_id = 1;
+  int32 page = 2;
+  int32 page_size = 3;
+}
+
+// Event Messages for RabbitMQ
+
+// User Created Event
+message UserCreatedEvent {
+  string user_id = 1;
+  string subject = 2;
+  string email = 3;
+  string first_name = 4;
+  string last_name = 5;
+  string display_name = 6;
+  string organization_id = 7;
+  string created_at = 8;
+}
+
+// User Updated Event
+message UserUpdatedEvent {
+  string user_id = 1;
+  string subject = 2;
+  string email = 3;
+  string first_name = 4;
+  string last_name = 5;
+  string display_name = 6;
+  string organization_id = 7;
+  string updated_at = 8;
+  repeated string changed_fields = 9;
+}
+
+// User Role Changed Event
+message UserRoleChangedEvent {
+  string user_id = 1;
+  string subject = 2;
+  UserRole old_role = 3;
+  UserRole new_role = 4;
+  string changed_by = 5;
+  string changed_at = 6;
+}
+
+// User Status Changed Event  
+message UserStatusChangedEvent {
+  string user_id = 1;
+  string subject = 2;
+  UserStatus old_status = 3;
+  UserStatus new_status = 4;
+  string reason = 5;
+  string changed_by = 6;
+  string changed_at = 7;
+}
+
